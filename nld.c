@@ -1,5 +1,5 @@
 /*
- * NEATLD ARM/X86(-64) STATIC LINKER
+ * NEATLD X86(-64) STATIC LINKER
  *
  * Copyright (C) 2010-2023 Ali Gholami Rudi
  *
@@ -243,12 +243,10 @@ static unsigned long outelf_addr(struct outelf *oe, char *name) {
   return symval(oe, obj, sym);
 }
 
-#define REL_ARM 0x10000
 #define REL_X64 0x20000
 #define REL_X86 0x40000
 
 static int arch_rel(int r) {
-  if (e_machine == EM_ARM) return REL_ARM | r;
   if (e_machine == EM_X86_64) return REL_X64 | r;
   if (e_machine == EM_386) return REL_X86 | r;
   return 0;
@@ -270,16 +268,13 @@ static void outelf_reloc_sec(struct outelf *oe, int o_idx, int s_idx) {
     unsigned long val = symval(oe, obj, sym) + REL_ADDEND(rel);
     unsigned long *dst = other + rel->r_offset;
     switch (arch_rel(ELF_R_TYPE(rel->r_info))) {
-      case REL_ARM | R_ARM_NONE:
       case REL_X86 | R_386_NONE:
       case REL_X64 | R_X86_64_NONE:
         break;
-      case REL_ARM | R_ARM_ABS16:
       case REL_X86 | R_386_16:
       case REL_X64 | R_X86_64_16:
         *(unsigned short *)dst += val;
         break;
-      case REL_ARM | R_ARM_ABS32:
       case REL_X86 | R_386_32:
       case REL_X64 | R_X86_64_32:
       case REL_X64 | R_X86_64_32S:
@@ -288,18 +283,11 @@ static void outelf_reloc_sec(struct outelf *oe, int o_idx, int s_idx) {
       case REL_X64 | R_X86_64_64:
         *dst += val;
         break;
-      case REL_ARM | R_ARM_REL32:
-      case REL_ARM | R_ARM_PLT32:
       case REL_X86 | R_386_PLT32:
       case REL_X86 | R_386_PC32:
       case REL_X64 | R_X86_64_PC32:
         addr = outelf_mapping(oe, other_shdr)->vaddr + rel->r_offset;
         *(unsigned int *)dst += val - addr;
-        break;
-      case REL_ARM | R_ARM_PC24:
-        addr = outelf_mapping(oe, other_shdr)->vaddr + rel->r_offset;
-        *dst =
-            (*dst & 0xff000000) | ((*dst + ((val - addr) >> 2)) & 0x00ffffff);
         break;
       default:
         die("neatld: unknown relocation type!");
